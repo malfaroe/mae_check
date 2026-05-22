@@ -31,6 +31,7 @@ jobs:
       - name: Generar estructura Android
         run: |
           flutter create --project-name mae_check --org com.mae mae_check
+          rm -rf mae_check/lib
           cp -r source/lib mae_check/lib
           cp source/pubspec.yaml mae_check/pubspec.yaml
 
