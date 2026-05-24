@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 import '../models/checklist.dart';
 import '../services/storage_service.dart';
@@ -28,6 +33,71 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _save() => _storage.save(_checklists);
+
+  // ── Import / Export ────────────────────────────────────────────────────────
+
+  Future<void> _exportAll() async {
+    await _shareJson(
+      _checklists.map((c) => c.toJson()).toList(),
+      filename: 'mae_check_export.json',
+      subject: 'MAE_Check — todas las checklists',
+    );
+  }
+
+  Future<void> _exportOne(Checklist checklist) async {
+    await _shareJson(
+      [checklist.toJson()],
+      filename: '${_safeName(checklist.name)}.json',
+      subject: 'MAE_Check — ${checklist.name}',
+    );
+  }
+
+  Future<void> _shareJson(
+    List<dynamic> data, {
+    required String filename,
+    required String subject,
+  }) async {
+    final json = const JsonEncoder.withIndent('  ').convert(data);
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/$filename');
+    await file.writeAsString(json);
+    await Share.shareXFiles(
+      [XFile(file.path, mimeType: 'application/json')],
+      subject: subject,
+    );
+  }
+
+  Future<void> _import() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['json'],
+    );
+    if (result == null || result.files.single.path == null) return;
+
+    try {
+      final content = await File(result.files.single.path!).readAsString();
+      final list = jsonDecode(content) as List;
+      final imported = list
+          .map((e) => Checklist.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      int added = 0;
+      setState(() {
+        for (final cl in imported) {
+          if (!_checklists.any((e) => e.id == cl.id)) {
+            _checklists.add(cl);
+            added++;
+          }
+        }
+      });
+      await _save();
+      _snack('$added checklist(s) importada(s)');
+    } catch (_) {
+      _snack('Archivo inválido. ¿Es un JSON de MAE_Check?');
+    }
+  }
+
+  // ── CRUD checklists ────────────────────────────────────────────────────────
 
   void _addChecklist() {
     final controller = TextEditingController();
@@ -119,12 +189,50 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  String _safeName(String name) => name.replaceAll(RegExp(r'[^\w]'), '_');
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  // ── UI ─────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('MAE_Check'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (v) {
+              if (v == 'export') _exportAll();
+              if (v == 'import') _import();
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'export',
+                child: ListTile(
+                  leading: Icon(Icons.upload_file),
+                  title: Text('Exportar todo'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+              PopupMenuItem(
+                value: 'import',
+                child: ListTile(
+                  leading: Icon(Icons.download),
+                  title: Text('Importar'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: _checklists.isEmpty
           ? const Center(
@@ -162,9 +270,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     onSelected: (v) {
                       if (v == 'edit') _editChecklist(cl);
                       if (v == 'delete') _deleteChecklist(cl);
+                      if (v == 'export') _exportOne(cl);
                     },
                     itemBuilder: (_) => const [
                       PopupMenuItem(value: 'edit', child: Text('Editar nombre')),
+                      PopupMenuItem(value: 'export', child: Text('Exportar')),
                       PopupMenuItem(value: 'delete', child: Text('Eliminar')),
                     ],
                   ),
