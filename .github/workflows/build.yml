@@ -34,7 +34,7 @@ jobs:
           rm -rf mae_check/lib
           cp -r source/lib mae_check/lib
           cp source/pubspec.yaml mae_check/pubspec.yaml
-          sed -i "s/ext.kotlin_version = .*/ext.kotlin_version = '1.9.10'/" mae_check/android/build.gradle
+          cat source/android_patch/kotlin_fix.gradle >> mae_check/android/build.gradle
 
       - name: Instalar dependencias
         working-directory: mae_check
