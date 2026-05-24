@@ -142,10 +142,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 final done = cl.tasks.where((t) => t.isChecked).length;
                 final total = cl.tasks.length;
                 return ListTile(
-                  title: Text(cl.name),
+                  title: Text(
+                    cl.name,
+                    style: const TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   subtitle: Text(
                     total == 0 ? 'Sin tareas' : '$done/$total completadas',
                     style: TextStyle(
+                      fontSize: 18,
                       color: total > 0 && done == total
                           ? Colors.green
                           : Colors.grey,

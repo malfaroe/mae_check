@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'screens/home_screen.dart';
 
 void main() {
@@ -16,6 +17,7 @@ class MAECheckApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
         useMaterial3: true,
+        textTheme: GoogleFonts.interTextTheme(),
       ),
       home: const HomeScreen(),
     );

@@ -20,6 +20,15 @@ class ChecklistScreen extends StatefulWidget {
 class _ChecklistScreenState extends State<ChecklistScreen> {
   final _uuid = const Uuid();
 
+  void _reorder(int oldIndex, int newIndex) {
+    setState(() {
+      if (newIndex > oldIndex) newIndex--;
+      final task = widget.checklist.tasks.removeAt(oldIndex);
+      widget.checklist.tasks.insert(newIndex, task);
+    });
+    widget.onChanged();
+  }
+
   void _addTask() {
     final controller = TextEditingController();
     showDialog(
@@ -108,12 +117,14 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 style: TextStyle(color: Colors.grey),
               ),
             )
-          : ListView.separated(
+          : ReorderableListView.builder(
               itemCount: tasks.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              onReorder: _reorder,
+              buildDefaultDragHandles: false,
               itemBuilder: (_, i) {
                 final task = tasks[i];
                 return ListTile(
+                  key: ValueKey(task.id),
                   leading: Checkbox(
                     value: task.isChecked,
                     onChanged: (v) {
@@ -123,21 +134,36 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   ),
                   title: Text(
                     task.title,
-                    style: task.isChecked
-                        ? const TextStyle(
-                            decoration: TextDecoration.lineThrough,
-                            color: Colors.grey,
-                          )
-                        : null,
+                    style: TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.bold,
+                      decoration: task.isChecked
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                      color: task.isChecked ? Colors.grey : null,
+                    ),
                   ),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (v) {
-                      if (v == 'edit') _editTask(task);
-                      if (v == 'delete') _deleteTask(task);
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'edit', child: Text('Editar')),
-                      PopupMenuItem(value: 'delete', child: Text('Eliminar')),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      PopupMenuButton<String>(
+                        onSelected: (v) {
+                          if (v == 'edit') _editTask(task);
+                          if (v == 'delete') _deleteTask(task);
+                        },
+                        itemBuilder: (_) => const [
+                          PopupMenuItem(value: 'edit', child: Text('Editar')),
+                          PopupMenuItem(
+                              value: 'delete', child: Text('Eliminar')),
+                        ],
+                      ),
+                      ReorderableDragStartListener(
+                        index: i,
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 4),
+                          child: Icon(Icons.drag_handle, color: Colors.grey),
+                        ),
+                      ),
                     ],
                   ),
                 );
